@@ -3,7 +3,7 @@
 #define RxD 10 //Pin 10 pour arduino RX --> vers TxD de la carte Bluetooth
 #define TxD 11 //Pin 11 pour arduino TX --> vers RxD de la carte Bluetooth 
 
-SoftwareSerial BTSerial(10, 11); // RX | TX
+SoftwareSerial BTSerie(10, 11); // RX | TX
 
 void setup() {
   InitCommunicationSerie();
