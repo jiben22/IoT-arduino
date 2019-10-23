@@ -7,6 +7,10 @@
 
 SoftwareSerial BTSerie(RxD, TxD); // RxD | TxD
 
+// Capteur de luminosité
+int photocellPin = 0; // the cell and 10K pulldown are connected to a0
+int photocellReading; // the analog reading from the analog resistor divider
+
 void setup() {
   InitCommunicationSerie();
   Serial.println("Initialisation carte : Ok");
@@ -61,12 +65,31 @@ void loop() {
   }
 
   // Capteur de temperature
-  int valeurBrute = analogRead(A0);
+  /*int valeurBrute = analogRead(A0);
 
   float tempCelcius = valeurBrute * (5.0 / 1023.0 * 100.0);
 
    Serial.print(tempCelcius, 2);
    Serial.println("°C");
   
+  delay(100);*/
+
+  // Capteur de luminosité
+
+  int valeurLuminosite = analogRead(A0);
+
+  Serial.print(valeurLuminosite);
+
+  if (valeurLuminosite < 10) {
+    Serial.println(" - Noir");
+  } else if (valeurLuminosite < 200) {
+    Serial.println(" - Sombre");
+  } else if (valeurLuminosite < 500) {
+    Serial.println(" - Lumiere");
+  } else if (valeurLuminosite < 800) {
+    Serial.println(" - Lumineux");
+  } else {
+    Serial.println(" - Tres lumineux");
+  }
   delay(100);
 }
