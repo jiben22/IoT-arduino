@@ -1,7 +1,9 @@
 #include <SoftwareSerial.h>
 
 #define RxD 10 //Pin 10 pour arduino RX --> vers TxD de la carte Bluetooth
-#define TxD 11 //Pin 11 pour arduino TX --> vers RxD de la carte Bluetooth 
+#define TxD 11 //Pin 11 pour arduino TX --> vers RxD de la carte Bluetooth
+
+// Pour passer en mode commande, mettre la broche EN sur le pin 3.3V
 
 SoftwareSerial BTSerie(RxD, TxD); // RxD | TxD
 
@@ -27,7 +29,7 @@ void InitCommunicationSerie() {
 }
 
 void InitCommunicationBluetoothSerie() {
-  BTSerie.begin(9600); //38400 / 57600 / 38400
+  BTSerie.begin(38400); //38400 / 57600 / 9600
   while(!BTSerie) {
     Serial.println("Attente reponse Bluetooth");
   }
@@ -43,15 +45,18 @@ void loop() {
       c = BTSerie.read();
       Serial.print(c);
     }
+    Serial.println(); // retour a la ligne
   }
 
   if(Serial.available()) {
-    Serial.print("Envoie vers BLuetooth : ");
+    Serial.print("Envoie vers Bluetooth : ");
     while(Serial.available()) {
       c = Serial.read();
       Serial.print(c);
       BTSerie.print(c);
     }
+    Serial.println(); // retour a la ligne
+    BTSerie.println();
   }
 
   delay(1000);
