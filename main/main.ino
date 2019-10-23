@@ -27,7 +27,7 @@ void InitCommunicationSerie() {
 }
 
 void InitCommunicationBluetoothSerie() {
-  BTSerie.begin(9600); //38400 / 57600 / 38400
+  BTSerie.begin(38400); //38400 / 57600 / 38400
   while(!BTSerie) {
     Serial.println("Attente reponse Bluetooth");
   }
@@ -37,6 +37,7 @@ void InitCommunicationBluetoothSerie() {
 void loop() {
   char c;
 
+  // Bluetooth
   if(BTSerie.available()) {
     Serial.println("Reception de : ");
     while(BTSerie.available()) {
@@ -46,7 +47,7 @@ void loop() {
   }
 
   if(Serial.available()) {
-    Serial.print("Envoie vers BLuetooth : ");
+    Serial.print("Envoie vers Bluetooth : ");
     while(Serial.available()) {
       c = Serial.read();
       Serial.print(c);
@@ -54,6 +55,13 @@ void loop() {
     }
   }
 
-  delay(1000);
+  // Capteur de temperature
+  int valeurBrute = analogRead(A0);
 
+  float tempCelcius = valeurBrute * (5.0 / 1023.0 * 100.0);
+
+   Serial.print(tempCelcius, 2);
+   Serial.println("°C");
+  
+  delay(100);
 }
