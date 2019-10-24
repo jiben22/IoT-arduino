@@ -19,6 +19,10 @@ int motor_down = 0; // 0=False, 1=True
 
 SoftwareSerial BTSerie(RxD, TxD); // RxD | TxD
 
+// Capteur de luminosité
+int photocellPin = 0; // the cell and 10K pulldown are connected to a0
+int photocellReading; // the analog reading from the analog resistor divider
+
 void setup() {
   InitCommunicationSerie();
   Serial.println("Initialisation carte : Ok");
@@ -39,9 +43,7 @@ void setup() {
 
 void InitCommunicationSerie() {
   Serial.begin(9600);
-  while(!Serial) {
-    
-  }
+  while(!Serial) {}
   Serial.println("Demarrage connexion serie : Ok");
 }
 
@@ -56,7 +58,7 @@ void InitCommunicationBluetoothSerie() {
 void loop() {
   // Bluetooth
   /*char c;
-  
+
   if(BTSerie.available()) {
     Serial.println("Reception de : ");
     while(BTSerie.available()) {
@@ -132,7 +134,26 @@ void loop() {
     motor_down = 0;
     cpt_motor = 0;
   }
-  
-  
+
+  // Capteur de luminosité
+
+  /*int valeurLuminosite = analogRead(A0);
+
+  Serial.print(valeurLuminosite);
+
+  if (valeurLuminosite < 10) {
+    Serial.println(" - Noir");
+  } else if (valeurLuminosite < 200) {
+    Serial.println(" - Sombre");
+  } else if (valeurLuminosite < 500) {
+    Serial.println(" - Lumiere");
+  } else if (valeurLuminosite < 800) {
+    Serial.println(" - Lumineux");
+  } else {
+    Serial.println(" - Tres lumineux");
+  }*/
+
+
+
   delay(loop_delay);
 }
