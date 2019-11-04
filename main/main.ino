@@ -63,7 +63,7 @@ void loop() {
   bluetooth_cmd_routine();
   //temp_routine();
   motor_routine();
-  lum_routine(); // FIXME, lum not work ?
+  lum_routine();
 
   delay(loop_delay);
 }
@@ -143,12 +143,21 @@ void lum_routine() {
   // Capteur de luminosité
   int lum = analogRead(A0);
 
-  if (lum < 200) {
-    if (shutter_is_open and !motor_down) close_shutter();
+  if (lum < 300) {
+    if (shutter_is_open and !motor_down) {
+      Serial.println("Il commence à faire sombre !");
+      BTSerie.println("Il commence à faire sombre !");
+      close_shutter();
+    }
   } else {
-    if (!shutter_is_open and !motor_up) open_shutter();
+    if (!shutter_is_open and !motor_up) {
+      Serial.println("Le temps s'éclaircit !");
+      BTSerie.println("Le temps s'éclaircit !");
+      open_shutter();
+    }
   }
 
+  // DEBUG
   /*Serial.print(lum);
 
   if (lum < 10) {
@@ -166,21 +175,25 @@ void lum_routine() {
 
 
 void open_shutter() {
-  digitalWrite(MOTOR_DOWN, LOW);
-  motor_down = 0;
-  motor_up = 1;
-  cpt_motor = 0;
-  
-  Serial.println("Ouverture des volets !");
-  BTSerie.println("Ouverture des volets !");
+  if (!shutter_is_open) {
+    digitalWrite(MOTOR_DOWN, LOW);
+    motor_down = 0;
+    motor_up = 1;
+    cpt_motor = 0;
+    
+    Serial.println("Ouverture des volets !");
+    BTSerie.println("Ouverture des volets !");
+  }
 }
 
 void close_shutter() {
-  digitalWrite(MOTOR_UP, LOW);
-  motor_up = 0;
-  motor_down = 1;
-  cpt_motor = 0;
-  
-  Serial.println("Fermeture des volets !");
-  BTSerie.println("Fermeture des volets !");
+  if (shutter_is_open) {
+    digitalWrite(MOTOR_UP, LOW);
+    motor_up = 0;
+    motor_down = 1;
+    cpt_motor = 0;
+    
+    Serial.println("Fermeture des volets !");
+    BTSerie.println("Fermeture des volets !");
+  }
 }
