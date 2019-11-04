@@ -145,14 +145,14 @@ void lum_routine() {
 
   if (lum < 300) {
     if (shutter_is_open and !motor_down) {
-      Serial.println("Il commence à faire sombre !");
-      BTSerie.println("Il commence à faire sombre !");
+      Serial.println("Il commence a faire sombre !");
+      BTSerie.println("Il commence a faire sombre !");
       close_shutter();
     }
   } else {
     if (!shutter_is_open and !motor_up) {
-      Serial.println("Le temps s'éclaircit !");
-      BTSerie.println("Le temps s'éclaircit !");
+      Serial.println("Le temps s'eclaircit !");
+      BTSerie.println("Le temps s'eclaircit !");
       open_shutter();
     }
   }
