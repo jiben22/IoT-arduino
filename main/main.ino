@@ -96,7 +96,7 @@ void bluetooth_cmd_routine() {
 
 void temp_routine(){
   // Capteur de temperature
-  int valeurBrute = analogRead(A0);
+  int valeurBrute = analogRead(A1);
 
   float tempCelcius = valeurBrute * (5.0 / 1023.0 * 100.0);
 
@@ -158,9 +158,9 @@ void lum_routine() {
   }
 
   // DEBUG
-  /*Serial.print(lum);
+  //Serial.println(lum);
 
-  if (lum < 10) {
+  /*if (lum < 10) {
     Serial.println(" - Noir");
   } else if (lum < 200) {
     Serial.println(" - Sombre");
