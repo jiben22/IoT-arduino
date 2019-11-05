@@ -41,18 +41,22 @@ void setup() {
   pinMode(MOTOR_DOWN, OUTPUT);
   pinMode(LED, OUTPUT);
 
-  // Configuration of Bluetooth for the smartphone
+  // Bluetooth Configuration for smartphone
   pinMode(RxD01, INPUT);
   pinMode(TxD01, OUTPUT);
-  InitCommunicationBluetoothSerie(BTSerieSmartphone);
+  BTSerieSmartphone.begin(38400); //38400 / 57600 / 9600
+  while(!BTSerieSmartphone) Serial.println("Attente reponse Bluetooth");
+  Serial.println("Demarrage connexion Bluetooth smartphone : Ok");
 
-  // Configuration of Bluetooth for another HC-05 module
+  // Bluetooth Configuration for another HC-05 module
   pinMode(RxD02, INPUT);
   pinMode(TxD02, OUTPUT);
-  InitCommunicationBluetoothSerie(BTSerieHC05);
+  BTSerieHC05.begin(9600); //38400 / 57600 / 9600
+  while(!BTSerieHC05) Serial.println("Attente reponse Bluetooth");
+  Serial.println("Demarrage connexion Bluetooth serie : Ok");
   
   // Connection with the other HC-05 module
-  connectWithHC05();
+  //connectWithHC05();
 }
 
 // Init communication with the computer
@@ -62,25 +66,24 @@ void InitCommunicationSerie() {
   Serial.println("Demarrage connexion serie : Ok");
 }
 
-void InitCommunicationBluetoothSerie(SoftwareSerial BTSerie) {
+/*void InitCommunicationBluetoothSerie() {
   BTSerie.begin(38400); //38400 / 57600 / 9600
   while(!BTSerie) {
     Serial.println("Attente reponse Bluetooth");
   }
   Serial.println("Demarrage connexion Bluetooth serie : Ok");
-}
-
+}*/
+/*
 void connectWithHC05() {
   BTSerieHC05.write("AT+RMAAD"); // Clear any paired devices
   BTSerieHC05.write("AT+ROLE=1"); // Set it as master
   BTSerieHC05.write("AT+CMODE=0");
   BTSerieHC05.write("AT+BIND=98d3,32,30f7b1"); // Address of slave HC-05 module
   BTSerieHC05.write("AT+UART=38400,0,0"); // Fix baud rate
-}
+}*/
 
 void loop() {
-  //bluetooth_smartphone_cmd_routine();
-  bluetooth_hc05_cmd_routine();
+  bluetooth_routine();
   //temp_routine();
   motor_routine();
   lum_routine();
@@ -88,49 +91,39 @@ void loop() {
   delay(loop_delay);
 }
 
-void bluetooth_smartphone_cmd_routine() {
+void bluetooth_routine() {
   // Bluetooth Smartphone
-  String received;
+  String received_s;
+  String received_o;
   String sended;
 
-  if(BTSerieSmartphone.available()) {
-    received = BTSerieSmartphone.readString();
-    Serial.print("Reception Smartphone de : ");
-    Serial.print(received);
+  BTSerieSmartphone.listen();
+  if(BTSerieSmartphone.isListening() && BTSerieSmartphone.available()) {
+    received_s = BTSerieSmartphone.readString();
+    Serial.print("Reception de Smartphone de : ");
+    Serial.print(received_s);
+  }
+  
+  BTSerieHC05.listen();
+  if(BTSerieHC05.isListening() && BTSerieHC05.available()) {
+    received_o = BTSerieHC05.readString();
+    Serial.print("Reception par HC05 de : ");
+    Serial.print(received_o);
   }
 
   if(Serial.available()) {
     sended = Serial.readString();
-    Serial.print("Envoie vers Bluetooth Smartphone : ");
+    Serial.print("Envoie vers Bluetooth : ");
     Serial.print(sended);
     BTSerieSmartphone.print(sended);
+    BTSerieHC05.print(sended);
   }
 
   // Commandes
-  if (received == "open\r\n" or sended == "open\n") {
+  if (received_s == "open\r\n" or sended == "open\n") {
     open_shutter();
-  } else if (received == "close\r\n" or sended == "close\n") {
+  } else if (received_s == "close\r\n" or sended == "close\n") {
     close_shutter();
-  }
-}
-
-
-void bluetooth_hc05_cmd_routine() {
-  // Bluetooth HC-05 module
-  String received;
-  String sended;
-
-  if(BTSerieHC05.available()) {
-    received = BTSerieHC05.readString();
-    Serial.print("Reception par HC05 de : ");
-    Serial.print(received);
-  }
-
-  if(Serial.available()) {
-    sended = Serial.readString();
-    Serial.print("Envoie vers Bluetooth HC05 : ");
-    Serial.print(sended);
-    BTSerieHC05.print(sended);
   }
 }
 
@@ -185,14 +178,14 @@ void lum_routine() {
 
   if (lum < 300) {
     if (shutter_is_open and !motor_down) {
-      Serial.println("Il commence à faire sombre !");
-      BTSerieSmartphone.println("Il commence à faire sombre !");
+      Serial.println("Il commence a faire sombre !");
+      BTSerieSmartphone.println("Il commence a faire sombre !");
       close_shutter();
     }
   } else {
     if (!shutter_is_open and !motor_up) {
-      Serial.println("Le temps s'éclaircit !");
-      BTSerieSmartphone.println("Le temps s'éclaircit !");
+      Serial.println("Le temps s'eclaircit !");
+      BTSerieSmartphone.println("Le temps s'eclaircit !");
       open_shutter();
     }
   }
