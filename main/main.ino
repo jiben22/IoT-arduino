@@ -6,10 +6,13 @@
 #define loop_delay 100 // delai enter deux lancement de la fonction loop()
 
 // Bluetooth
-#define RxD 10 //Pin 10 pour arduino RX --> vers TxD de la carte Bluetooth
-#define TxD 11 //Pin 11 pour arduino TX --> vers RxD de la carte Bluetooth
+#define RxD01 10 //Pin 10 pour arduino RX --> vers TxD de la carte Bluetooth
+#define TxD01 11 //Pin 11 pour arduino TX --> vers RxD de la carte Bluetooth
+#define RxD02 12 //Pin 12 pour arduino RX --> vers TxD de la carte Bluetooth
+#define TxD02 13 //Pin 13 pour arduino TX --> vers RxD de la carte Bluetooth
 
-SoftwareSerial BTSerie(RxD, TxD); // RxD | TxD
+SoftwareSerial BTSerieSmartphone(RxD01, TxD01); // For smartphone
+SoftwareSerial BTSerieHC05(RxD02, TxD02); // For another HC-05 module
 
 
 // Motor
@@ -38,20 +41,28 @@ void setup() {
   pinMode(MOTOR_DOWN, OUTPUT);
   pinMode(LED, OUTPUT);
 
-  // Configuration du bluetooth
-  pinMode(RxD, INPUT);
-  pinMode(TxD, OUTPUT);
-  InitCommunicationBluetoothSerie();
+  // Configuration of Bluetooth for the smartphone
+  pinMode(RxD01, INPUT);
+  pinMode(TxD01, OUTPUT);
+  InitCommunicationBluetoothSerie(BTSerieSmartphone);
+
+  // Configuration of Bluetooth for another HC-05 module
+  pinMode(RxD02, INPUT);
+  pinMode(TxD02, OUTPUT);
+  InitCommunicationBluetoothSerie(BTSerieHC05);
+  
+  // Connection with the other HC-05 module
+  connectWithHC05();
 }
 
-// Initialiastion de la communication serie avec l'ordinateur
+// Init communication with the computer
 void InitCommunicationSerie() {
   Serial.begin(9600);
   while(!Serial) {}
   Serial.println("Demarrage connexion serie : Ok");
 }
 
-void InitCommunicationBluetoothSerie() {
+void InitCommunicationBluetoothSerie(SoftwareSerial BTSerie) {
   BTSerie.begin(38400); //38400 / 57600 / 9600
   while(!BTSerie) {
     Serial.println("Attente reponse Bluetooth");
@@ -59,8 +70,17 @@ void InitCommunicationBluetoothSerie() {
   Serial.println("Demarrage connexion Bluetooth serie : Ok");
 }
 
+void connectWithHC05() {
+  BTSerieHC05.write("AT+RMAAD"); // Clear any paired devices
+  BTSerieHC05.write("AT+ROLE=1"); // Set it as master
+  BTSerieHC05.write("AT+CMODE=0");
+  BTSerieHC05.write("AT+BIND=98d3,32,30f7b1"); // Address of slave HC-05 module
+  BTSerieHC05.write("AT+UART=38400,0,0"); // Fix baud rate
+}
+
 void loop() {
-  bluetooth_cmd_routine();
+  //bluetooth_smartphone_cmd_routine();
+  bluetooth_hc05_cmd_routine();
   //temp_routine();
   motor_routine();
   lum_routine();
@@ -68,22 +88,22 @@ void loop() {
   delay(loop_delay);
 }
 
-void bluetooth_cmd_routine() {
-  // Bluetooth
+void bluetooth_smartphone_cmd_routine() {
+  // Bluetooth Smartphone
   String received;
   String sended;
 
-  if(BTSerie.available()) {
-    received = BTSerie.readString();
-    Serial.print("Reception de : ");
+  if(BTSerieSmartphone.available()) {
+    received = BTSerieSmartphone.readString();
+    Serial.print("Reception Smartphone de : ");
     Serial.print(received);
   }
 
   if(Serial.available()) {
     sended = Serial.readString();
-    Serial.print("Envoie vers Bluetooth : ");
+    Serial.print("Envoie vers Bluetooth Smartphone : ");
     Serial.print(sended);
-    BTSerie.print(sended);
+    BTSerieSmartphone.print(sended);
   }
 
   // Commandes
@@ -94,9 +114,29 @@ void bluetooth_cmd_routine() {
   }
 }
 
+
+void bluetooth_hc05_cmd_routine() {
+  // Bluetooth HC-05 module
+  String received;
+  String sended;
+
+  if(BTSerieHC05.available()) {
+    received = BTSerieHC05.readString();
+    Serial.print("Reception par HC05 de : ");
+    Serial.print(received);
+  }
+
+  if(Serial.available()) {
+    sended = Serial.readString();
+    Serial.print("Envoie vers Bluetooth HC05 : ");
+    Serial.print(sended);
+    BTSerieHC05.print(sended);
+  }
+}
+
 void temp_routine(){
   // Capteur de temperature
-  int valeurBrute = analogRead(A1);
+  int valeurBrute = analogRead(A0);
 
   float tempCelcius = valeurBrute * (5.0 / 1023.0 * 100.0);
 
@@ -145,22 +185,22 @@ void lum_routine() {
 
   if (lum < 300) {
     if (shutter_is_open and !motor_down) {
-      Serial.println("Il commence a faire sombre !");
-      BTSerie.println("Il commence a faire sombre !");
+      Serial.println("Il commence à faire sombre !");
+      BTSerieSmartphone.println("Il commence à faire sombre !");
       close_shutter();
     }
   } else {
     if (!shutter_is_open and !motor_up) {
-      Serial.println("Le temps s'eclaircit !");
-      BTSerie.println("Le temps s'eclaircit !");
+      Serial.println("Le temps s'éclaircit !");
+      BTSerieSmartphone.println("Le temps s'éclaircit !");
       open_shutter();
     }
   }
 
   // DEBUG
-  //Serial.println(lum);
+  /*Serial.print(lum);
 
-  /*if (lum < 10) {
+  if (lum < 10) {
     Serial.println(" - Noir");
   } else if (lum < 200) {
     Serial.println(" - Sombre");
@@ -182,7 +222,7 @@ void open_shutter() {
     cpt_motor = 0;
     
     Serial.println("Ouverture des volets !");
-    BTSerie.println("Ouverture des volets !");
+    BTSerieSmartphone.println("Ouverture des volets !");
   }
 }
 
@@ -194,6 +234,6 @@ void close_shutter() {
     cpt_motor = 0;
     
     Serial.println("Fermeture des volets !");
-    BTSerie.println("Fermeture des volets !");
+    BTSerieSmartphone.println("Fermeture des volets !");
   }
 }
