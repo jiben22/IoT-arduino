@@ -20,12 +20,15 @@ SoftwareSerial BTSerieHC05(RxD02, TxD02); // For another HC-05 module
 #define MOTOR_DOWN 4      //Pin 4 pour le moteur (ouvrir)
 #define LED 7             //Pin 7 pour la led (qui indique que le moteur est allumé)
 #define motor_tps_on 5000 // temps d'allumage du moteur (5 sec)
+#define timeout_other_card 1000 // timeout avant de quitter (1.5sec)
 
 int cpt_motor = 0;       // compteur pour le moteur
 int motor_up = 0;        // 0=False, 1=True
 int motor_down = 0;      // 0=False, 1=True
 int shutter_is_open = 1; // par default c'est ouvert
+int mode_auto = 1;       // mode automatique, ou manuel (pour l'ouverture/fermeture des vollets)
 
+int timeout_card_cpt = 0;
 
 // Capteur de luminosité
 int photocellPin = 0; // the cell and 10K pulldown are connected to a0
@@ -55,8 +58,8 @@ void setup() {
   while(!BTSerieHC05) Serial.println("Attente reponse Bluetooth");
   Serial.println("Demarrage connexion Bluetooth serie : Ok");
   
-  // Connection with the other HC-05 module
-  //connectWithHC05();
+  // default, listen Smartphone
+  BTSerieSmartphone.listen();
 }
 
 // Init communication with the computer
@@ -66,70 +69,82 @@ void InitCommunicationSerie() {
   Serial.println("Demarrage connexion serie : Ok");
 }
 
-/*void InitCommunicationBluetoothSerie() {
-  BTSerie.begin(38400); //38400 / 57600 / 9600
-  while(!BTSerie) {
-    Serial.println("Attente reponse Bluetooth");
-  }
-  Serial.println("Demarrage connexion Bluetooth serie : Ok");
-}*/
-/*
-void connectWithHC05() {
-  BTSerieHC05.write("AT+RMAAD"); // Clear any paired devices
-  BTSerieHC05.write("AT+ROLE=1"); // Set it as master
-  BTSerieHC05.write("AT+CMODE=0");
-  BTSerieHC05.write("AT+BIND=98d3,32,30f7b1"); // Address of slave HC-05 module
-  BTSerieHC05.write("AT+UART=38400,0,0"); // Fix baud rate
-}*/
-
 void loop() {
   bluetooth_routine();
   //temp_routine();
   motor_routine();
-  lum_routine();
+  if (mode_auto) lum_routine();
 
   delay(loop_delay);
 }
 
 void bluetooth_routine() {
   // Bluetooth Smartphone
-  String received_s;
-  String received_o;
-  String sended;
+  String received_s = "";
+  String received_o = "";
+  String sended = "";
 
-  BTSerieSmartphone.listen();
+  // when we wait some answer from other arduino card
+  if(BTSerieHC05.isListening()) {
+    if (BTSerieHC05.available()) {
+      received_o = BTSerieHC05.readString();
+  
+      // reconnect to  smartphone
+      timeout_card_cpt=0;
+      BTSerieSmartphone.listen();
+      
+      Serial.print("[DEBUG] Reception par HC05 de : ");
+      Serial.print(received_o);
+      BTSerieSmartphone.print(received_o); // envoie de la reponse
+    }
+    
+    timeout_card_cpt++;
+    if (timeout_card_cpt * loop_delay >= timeout_other_card) {
+      // reconnect to  smartphone
+      timeout_card_cpt=0;
+      BTSerieSmartphone.listen();
+      BTSerieSmartphone.println("Module 2 inaccessible !");
+      Serial.println("[WARNING] Module 2 inaccessible !");
+    }
+  }
+
   if(BTSerieSmartphone.isListening() && BTSerieSmartphone.available()) {
     received_s = BTSerieSmartphone.readString();
-    Serial.print("Reception de Smartphone de : ");
+    Serial.print("[DEBUG] Reception de Smartphone de : ");
     Serial.print(received_s);
   }
-  
-  BTSerieHC05.listen();
-  if(BTSerieHC05.isListening() && BTSerieHC05.available()) {
-    received_o = BTSerieHC05.readString();
-    Serial.print("Reception par HC05 de : ");
-    Serial.print(received_o);
-  }
 
+  // DEBUG on computer
   if(Serial.available()) {
     sended = Serial.readString();
-    Serial.print("Envoie vers Bluetooth : ");
+    Serial.print("[DEBUG] Envoie vers Bluetooth : ");
     Serial.print(sended);
     BTSerieSmartphone.print(sended);
-    BTSerieHC05.print(sended);
   }
 
   // Commandes
   if (received_s == "open\r\n" or sended == "open\n") {
-    open_shutter();
+    mode_auto=0;        // passage auto en mode manuel
+    open_shutter();     // ouverture des vollets
   } else if (received_s == "close\r\n" or sended == "close\n") {
-    close_shutter();
+    mode_auto=0;        // passage auto en mode manuel
+    close_shutter();    // fermeture des vollets
+  } else if (received_s == "auto\r\n" or sended == "auto\n") {
+    if (!mode_auto) {
+      mode_auto=1;
+      Serial.println("[DEBUG] Passage en mode automatique du vollet !");
+      BTSerieSmartphone.println("Passage en mode automatique du vollet !");
+    }
+  } else if (received_s != "" && sended != "") {
+    // send to other arduino card
+    BTSerieHC05.listen();
+    BTSerieHC05.print(sended);
   }
 }
 
 void temp_routine(){
   // Capteur de temperature
-  int valeurBrute = analogRead(A0);
+  int valeurBrute = analogRead(A1);
 
   float tempCelcius = valeurBrute * (5.0 / 1023.0 * 100.0);
 
@@ -178,13 +193,13 @@ void lum_routine() {
 
   if (lum < 300) {
     if (shutter_is_open and !motor_down) {
-      Serial.println("Il commence a faire sombre !");
+      Serial.println("[DEBUG] Il commence a faire sombre !");
       BTSerieSmartphone.println("Il commence a faire sombre !");
       close_shutter();
     }
   } else {
     if (!shutter_is_open and !motor_up) {
-      Serial.println("Le temps s'eclaircit !");
+      Serial.println("[DEBUG] Le temps s'eclaircit !");
       BTSerieSmartphone.println("Le temps s'eclaircit !");
       open_shutter();
     }
@@ -214,8 +229,13 @@ void open_shutter() {
     motor_up = 1;
     cpt_motor = 0;
     
-    Serial.println("Ouverture des volets !");
+    Serial.println("[DEBUG] Ouverture des volets !");
     BTSerieSmartphone.println("Ouverture des volets !");
+
+    // envoi vers l'autre carte
+    BTSerieHC05.listen();
+    BTSerieHC05.print("is_opening_shutter");
+    BTSerieSmartphone.listen();
   }
 }
 
@@ -226,7 +246,12 @@ void close_shutter() {
     motor_down = 1;
     cpt_motor = 0;
     
-    Serial.println("Fermeture des volets !");
+    Serial.println("[DEBUG] Fermeture des volets !");
     BTSerieSmartphone.println("Fermeture des volets !");
+    
+    // envoi vers l'autre carte
+    BTSerieHC05.listen();
+    BTSerieHC05.print("is_closing_shutter");
+    BTSerieSmartphone.listen();
   }
 }
