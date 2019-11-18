@@ -135,7 +135,7 @@ void bluetooth_routine() {
       Serial.println("[DEBUG] Passage en mode automatique du vollet !");
       BTSerieSmartphone.println("Passage en mode automatique du vollet !");
     }
-  } else if (received_s != "" && sended != "") {
+  } else if (received_s != "" or sended != "") {
     // send to other arduino card
     BTSerieHC05.listen();
     BTSerieHC05.print(sended);
