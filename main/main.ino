@@ -20,13 +20,13 @@ SoftwareSerial BTSerieHC05(RxD02, TxD02); // For another HC-05 module
 #define MOTOR_DOWN 4      //Pin 4 pour le moteur (ouvrir)
 #define LED 7             //Pin 7 pour la led (qui indique que le moteur est allumé)
 #define motor_tps_on 5000 // temps d'allumage du moteur (5 sec)
-#define timeout_other_card 1000 // timeout avant de quitter (1.5sec)
+#define timeout_other_card 2000 // timeout avant de quitter (2sec)
 
 int cpt_motor = 0;       // compteur pour le moteur
 int motor_up = 0;        // 0=False, 1=True
 int motor_down = 0;      // 0=False, 1=True
 int shutter_is_open = 1; // par default c'est ouvert
-int mode_auto = 1;       // mode automatique, ou manuel (pour l'ouverture/fermeture des vollets)
+int mode_auto = 1;       // mode automatique, ou manuel (pour l'ouverture/fermeture des volets)
 
 int timeout_card_cpt = 0;
 
@@ -43,6 +43,7 @@ void setup() {
   pinMode(MOTOR_UP, OUTPUT);
   pinMode(MOTOR_DOWN, OUTPUT);
   pinMode(LED, OUTPUT);
+  digitalWrite(LED, HIGH); // turn off
 
   // Bluetooth Configuration for smartphone
   pinMode(RxD01, INPUT);
@@ -54,7 +55,7 @@ void setup() {
   // Bluetooth Configuration for another HC-05 module
   pinMode(RxD02, INPUT);
   pinMode(TxD02, OUTPUT);
-  BTSerieHC05.begin(9600); //38400 / 57600 / 9600
+  BTSerieHC05.begin(38400); //38400 / 57600 / 9600
   while(!BTSerieHC05) Serial.println("Attente reponse Bluetooth");
   Serial.println("Demarrage connexion Bluetooth serie : Ok");
   
@@ -125,31 +126,35 @@ void bluetooth_routine() {
   // Commandes
   if (received_s == "open\r\n" or sended == "open\n") {
     mode_auto=0;        // passage auto en mode manuel
-    open_shutter();     // ouverture des vollets
+    open_shutter();     // ouverture des volets
   } else if (received_s == "close\r\n" or sended == "close\n") {
     mode_auto=0;        // passage auto en mode manuel
-    close_shutter();    // fermeture des vollets
+    close_shutter();    // fermeture des volets
   } else if (received_s == "auto\r\n" or sended == "auto\n") {
     if (!mode_auto) {
       mode_auto=1;
-      Serial.println("[DEBUG] Passage en mode automatique du vollet !");
-      BTSerieSmartphone.println("Passage en mode automatique du vollet !");
+      Serial.println("[DEBUG] Passage en mode automatique du volet !");
+      BTSerieSmartphone.println("Passage en mode automatique du volet !");
     }
   } else if (received_s != "" or sended != "") {
     // send to other arduino card
     BTSerieHC05.listen();
-    BTSerieHC05.print(sended);
+    if (received_s != "") BTSerieHC05.print(received_s);
+    else BTSerieHC05.print(sended);
   }
 }
 
 void temp_routine(){
+  // C'est maintenant gerer par l'autre carte
+  BTSerieHC05.listen();
+  BTSerieHC05.print("temperature");
   // Capteur de temperature
-  int valeurBrute = analogRead(A1);
+  /*int valeurBrute = analogRead(A1);
 
   float tempCelcius = valeurBrute * (5.0 / 1023.0 * 100.0);
 
   Serial.print(tempCelcius, 2);
-  Serial.println("°C");
+  Serial.println("°C");*/
   
 }
 
