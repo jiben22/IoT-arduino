@@ -21,7 +21,9 @@ SoftwareSerial BTSerieHC05(RxD02, TxD02); // For another HC-05 module
 #define LED 7             //Pin 7 pour la led (qui indique que le moteur est allumé)
 #define motor_tps_on 5000 // temps d'allumage du moteur (5 sec)
 #define timeout_other_card 2000 // timeout avant de quitter (2sec)
+#define temp_asked_delay 30000 // on demande la temperature toutes les 30 sec (temps relatif)
 
+int cpt_temp = 0;        // compteur pour demande temperature
 int cpt_motor = 0;       // compteur pour le moteur
 int motor_up = 0;        // 0=False, 1=True
 int motor_down = 0;      // 0=False, 1=True
@@ -72,7 +74,7 @@ void InitCommunicationSerie() {
 
 void loop() {
   bluetooth_routine();
-  //temp_routine();
+  temp_routine();
   motor_routine();
   if (mode_auto) lum_routine();
 
@@ -104,7 +106,6 @@ void bluetooth_routine() {
       // reconnect to  smartphone
       timeout_card_cpt=0;
       BTSerieSmartphone.listen();
-      BTSerieSmartphone.println("Module 2 inaccessible !");
       Serial.println("[WARNING] Module 2 inaccessible !");
     }
   }
@@ -135,6 +136,9 @@ void bluetooth_routine() {
       mode_auto=1;
       Serial.println("[DEBUG] Passage en mode automatique du volet !");
       BTSerieSmartphone.println("Passage en mode automatique du volet !");
+    } else {
+      Serial.println("[DEBUG] Mode automatique deja active !");
+      BTSerieSmartphone.println("Mode automatique deja active !");
     }
   } else if (received_s != "" or sended != "") {
     // send to other arduino card
@@ -145,9 +149,14 @@ void bluetooth_routine() {
 }
 
 void temp_routine(){
-  // C'est maintenant gerer par l'autre carte
-  BTSerieHC05.listen();
-  BTSerieHC05.print("temperature");
+  // On demande la température de temps en temps via l'autre module
+  cpt_temp++;
+  if (cpt_temp * loop_delay >= temp_asked_delay) {
+    cpt_temp=0;
+    Serial.println("[DEBUG] Demande de la temperature ambiante ! (autre carte)");
+    BTSerieHC05.listen();
+    BTSerieHC05.print("temperature");
+  }
   // Capteur de temperature
   /*int valeurBrute = analogRead(A1);
 
